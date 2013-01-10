@@ -4,12 +4,15 @@ from functools import wraps
 from cachemodel import CACHE_FOREVER_TIMEOUT
 from cachemodel.utils import generate_cache_key
 
-def cached_method(auto_publish=False):
+def cached_method(auto_publish=False, cache_by_pk=True):
     """A decorator for CacheModel methods."""
     def decorator(target):
         @wraps(target)
         def wrapper(self, *args, **kwargs):
-            key = generate_cache_key([self.__class__.__name__, target.__name__, self.pk], *args, **kwargs)
+            cache_by = [self.__class__.__name__, target.__name__]
+            if cache_by_pk:
+                cache_by.append(self.pk)
+            key = generate_cache_key(cache_by, *args, **kwargs)
             data = cache.get(key)
             if data is None:
                 data = target(self, *args, **kwargs)
@@ -27,6 +30,10 @@ def cached_method(auto_publish=False):
         return decorator(func)
     else:
         return decorator
+
+
+def cached_classmethod(cache_by_pk=False, *args, **kwargs):
+    return cached_method(cache_by_pk=cache_by_pk, *args, **kwargs)
 
 
 def denormalized_field(field_name):
